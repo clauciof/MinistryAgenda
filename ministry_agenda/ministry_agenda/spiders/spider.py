@@ -5,7 +5,7 @@ import pandas as pd
 
 class MinistrySpider(scrapy.Spider):
     name = 'Ministryspider'
-    start_urls = ['http://www.economia.gov.br/agendas/gabinete-do-ministro/ministro-da-economia/paulo-guedes/2020-03-09/']
+    start_urls = ['http://www.economia.gov.br/agendas/gabinete-do-ministro/ministro-da-economia/paulo-guedes/']
     MinistryName = 'Ministério da Economia'
     MinisterName = 'Paulo Guedes'
     
@@ -19,14 +19,29 @@ class MinistrySpider(scrapy.Spider):
         event_date = response.xpath('//time[@class="horario comprimisso-inicio"]/@datetime').getall()
         event_location = [x.text for x in soup.select('.comprimisso-local')]
         event_participants = response.xpath('//p[@class="comprimisso-participantes"]').getall()
-        dia_atual = [ s for s in soup.select('.agenda-dia')[0].text.split() if s.isdigit() ]
-        
+        days = response.xpath('//a[@title="Agenda"]/@href').getall()
+        months = self.url_months(response)
+     
         
         #tratando dados ausentes...
         d_locals = self.trata_local(response, event_location)
         d_participants = self.trata_participantes(response, event_participants)
         
         self.salva_csv(event_title, event_date, d_locals, d_participants)
+        for day in days:
+            yield scrapy.Request( str(day), callback=self.parse)
+
+        for month in months:
+            yield scrapy.Request(str(month), callback=self.parse)
+
+    def url_months(self, response):
+        meses = response.xpath('//table[@id="t-2020"]').getall()
+        soup = BeautifulSoup(meses[0], 'lxml')
+        months = soup.find_all('a', href=True)
+        url_months = [month['href'] for month in months]        
+                
+        return url_months
+
 
     def trata_local(self, response, el):
         dados = response.xpath('//div[@class="comprimisso-dados"]').getall()
