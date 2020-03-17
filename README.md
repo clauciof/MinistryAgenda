@@ -22,6 +22,10 @@ No diretório /spiders executar o comando:
 scrapy runspider spider.py
 ```
 
+## Visualização do dataset
+(https://github.com/clauciof/Ministy-Agenda/blob/master/agenda_analise.png)
+
+
 
 ## Autor
 
