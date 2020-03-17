@@ -14,36 +14,38 @@ class MinistrySpider(scrapy.Spider):
         soup = BeautifulSoup(response.body, 'lxml')
     
         #extraindo os dados
-        events = response.xpath('//div[@class="comprimisso-dados"]').getall()
-        event_title = [x.string for x in soup.select('.comprimisso-titulo')] #Sim, a classe se chama comprimisso
-        event_date = response.xpath('//time[@class="horario comprimisso-inicio"]/@datetime').getall()
-        event_location = [x.text for x in soup.select('.comprimisso-local')]
-        event_participants = response.xpath('//p[@class="comprimisso-participantes"]').getall()
-        days = response.xpath('//a[@title="Agenda"]/@href').getall()
-        months = self.url_months(response)
-     
+        eventos = response.xpath('//div[@class="comprimisso-dados"]').getall()
+        evento_titulo = [x.string for x in soup.select('.comprimisso-titulo')] #Sim, a classe se chama comprimisso
+        evento_data = response.xpath('//time[@class="horario comprimisso-inicio"]/@datetime').getall()
+        evento_local = [x.text for x in soup.select('.comprimisso-local')]
+        evento_participantes = response.xpath('//p[@class="comprimisso-participantes"]').getall()
+        dias = response.xpath('//a[@title="Agenda"]/@href').getall()
+        meses = self.url_months(response)
+            
+        #tratando dados ausentes e retornando um dicionario com locais e participantes
+        d_locais = self.trata_local(response, evento_local)
+        d_participantes = self.trata_participantes(response, evento_participantes)
         
-        #tratando dados ausentes...
-        d_locals = self.trata_local(response, event_location)
-        d_participants = self.trata_participantes(response, event_participants)
+        self.salva_csv(evento_titulo, evento_data, d_locais, d_participantes)
         
-        self.salva_csv(event_title, event_date, d_locals, d_participants)
-        for day in days:
-            yield scrapy.Request( str(day), callback=self.parse)
+        for dia in dias:
+            yield scrapy.Request( str(dia), callback=self.parse)
 
-        for month in months:
-            yield scrapy.Request(str(month), callback=self.parse)
+        for mes in meses:
+            yield scrapy.Request( str(mes), callback=self.parse)
+
+            
 
     def url_months(self, response):
-        meses = response.xpath('//table[@id="t-2020"]').getall()
-        soup = BeautifulSoup(meses[0], 'lxml')
-        months = soup.find_all('a', href=True)
-        url_months = [month['href'] for month in months]        
+        meses_table = response.xpath('//table[@id="t-2020"]').getall()
+        soup = BeautifulSoup(meses_table[0], 'lxml')
+        meses = soup.find_all('a', href=True)
+        url_meses = [mes['href'] for mes in meses]        
                 
-        return url_months
+        return url_meses
 
 
-    def trata_local(self, response, el):
+    def trata_local(self, response, el): # Atribui N/A para locais ausentes
         dados = response.xpath('//div[@class="comprimisso-dados"]').getall()
         dicionario = {}
 
@@ -52,11 +54,11 @@ class MinistrySpider(scrapy.Spider):
             if dados[i].find("comprimisso-local") == -1:
                 dicionario[i] = "N/A"
             else:
-                dicionario[i] = el[y].replace('\n', '')
+                dicionario[i] = el[y].replace('\n', '').replace('Local:', '')               
                 y=y+1
         return dicionario
 
-    def trata_participantes(self, response, ep):
+    def trata_participantes(self, response, ep):  # Atribui N/A para participantes ausentes
         dados = response.xpath('//div[@class="comprimisso-dados"]').getall()
         dicionario = {}
         
@@ -64,13 +66,10 @@ class MinistrySpider(scrapy.Spider):
         for i in range(0, len(dados)):
             if dados[i].find("comprimisso-participantes") == -1:
                 dicionario[i] = "N/A"
-            else:
+            else:   # Elimina tags presentes na string
                 string = ep[y]
-                dicionario[i] = string[56:] # 56 = len(<p class="comprimisso-participantes ...")
-                dicionario[i] = dicionario[i].replace('\r<br>', ', ')
-                dicionario[i] = dicionario[i].replace('</p>', '')
-                dicionario[i] = dicionario[i].replace('>', '')
-                dicionario[i] = dicionario[i].split(', ')
+                dicionario[i] = string[56:]     # Elimina <p class="comprimisso-participantes ..." 
+                dicionario[i] = dicionario[i].replace('\r<br>', ', ').replace('</p>', '').replace('>', '').split(', ')
                 y = y+1
         return dicionario
         
@@ -78,14 +77,12 @@ class MinistrySpider(scrapy.Spider):
     def salva_csv(self, et, ed, dl, dp):
         df = pd.DataFrame(columns = None)
     
-        
         for i in range(0, len(et)):
             dicionario = {'MinistryName': self.MinistryName, 'MinisterName': self.MinisterName, 
             'EventDate': ed[i] , 'EventTitle': et[i], 'EventLocation': [dl[i]], 'EventParticipants': [dp[i]]}
-            _df = pd.DataFrame(dicionario, index=[0])
-            df = df.append(_df, ignore_index=True)
+            df_aux = pd.DataFrame(dicionario, index=[0])
+            df = df.append(df_aux, ignore_index=True)
     
-
 
         with open('data.csv', 'a', encoding="utf-8") as f:
             df.to_csv(f, header=f.tell()==0, index=False)
