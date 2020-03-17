@@ -24,7 +24,7 @@ scrapy runspider spider.py
 
 ## Visualização do dataset
 
-![alt Text](https://github.com/clauciof/Ministy-Agenda/blob/master/agenda_analise.png)
+![alt Text]()
 
 
 
