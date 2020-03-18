@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import scrapy
 import pandas as pd
+import random
 
 
 class MinistrySpider(scrapy.Spider):
@@ -8,6 +9,7 @@ class MinistrySpider(scrapy.Spider):
     start_urls = ['http://www.economia.gov.br/agendas/gabinete-do-ministro/ministro-da-economia/paulo-guedes/']
     MinistryName = 'Ministério da Economia'
     MinisterName = 'Paulo Guedes'
+    id_ = []
     
     def parse(self, response):
         
@@ -28,13 +30,14 @@ class MinistrySpider(scrapy.Spider):
         
         self.salva_csv(evento_titulo, evento_data, d_locais, d_participantes)
         
+
+        #percorrendo os links do calendario
         for dia in dias:
             yield scrapy.Request( str(dia), callback=self.parse)
-
+        
         for mes in meses:
             yield scrapy.Request( str(mes), callback=self.parse)
 
-            
 
     def url_months(self, response):
         meses_table = response.xpath('//table[@id="t-2020"]').getall()
@@ -76,13 +79,18 @@ class MinistrySpider(scrapy.Spider):
 
     def salva_csv(self, et, ed, dl, dp):
         df = pd.DataFrame(columns = None)
-    
+        
         for i in range(0, len(et)):
-            dicionario = {'MinistryName': self.MinistryName, 'MinisterName': self.MinisterName, 
+            id_aux = random.randrange(10000)
+            while id_aux in self.id_:
+                id_aux = random.randrange(10000)    
+            self.id_.append(id_aux)
+
+            dicionario = {'Id': id_aux, 'MinistryName': self.MinistryName, 'MinisterName': self.MinisterName, 
             'EventDate': ed[i] , 'EventTitle': et[i], 'EventLocation': [dl[i]], 'EventParticipants': [dp[i]]}
             df_aux = pd.DataFrame(dicionario, index=[0])
             df = df.append(df_aux, ignore_index=True)
     
-
         with open('data.csv', 'a', encoding="utf-8") as f:
             df.to_csv(f, header=f.tell()==0, index=False)
+        
