@@ -86,11 +86,11 @@ class MinistrySpider(scrapy.Spider):
                 id_aux = random.randrange(10000)    
             self.id_.append(id_aux)
 
-            dicionario = {'Id': id_aux, 'MinistryName': self.MinistryName, 'MinisterName': self.MinisterName, 
+            dicionario = {'id': id_aux, 'MinistryName': self.MinistryName, 'MinisterName': self.MinisterName, 
             'EventDate': ed[i] , 'EventTitle': et[i], 'EventLocation': [dl[i]], 'EventParticipants': [dp[i]]}
             df_aux = pd.DataFrame(dicionario, index=[0])
             df = df.append(df_aux, ignore_index=True)
     
         with open('data.csv', 'a', encoding="utf-8") as f:
-            df.to_csv(f, header=f.tell()==0, index=False)
+            df.to_csv(f, index=False)
         
