@@ -11,6 +11,7 @@ class MinistrySpider(scrapy.Spider):
     MinisterName = 'Paulo Guedes'
     id_ = []
     
+    
     def parse(self, response):
         
         soup = BeautifulSoup(response.body, 'lxml')
@@ -78,8 +79,8 @@ class MinistrySpider(scrapy.Spider):
         
 
     def salva_csv(self, et, ed, dl, dp):
-        df = pd.DataFrame(columns = None)
-        
+        df = pd.DataFrame(columns = ['id', 'MinistryName', 'MinisterName', 'EventDate', 'EventTitle', 'EventLocation', 'EventParticipants'])
+
         for i in range(0, len(et)):
             id_aux = random.randrange(10000)
             while id_aux in self.id_:
@@ -91,6 +92,7 @@ class MinistrySpider(scrapy.Spider):
             df_aux = pd.DataFrame(dicionario, index=[0])
             df = df.append(df_aux, ignore_index=True)
     
+        
         with open('data.csv', 'a', encoding="utf-8") as f:
-            df.to_csv(f, index=False)
+            df.to_csv(f, header=f.tell()==0, index=False)
         
